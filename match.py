@@ -18,7 +18,7 @@ from __future__ import print_function
 
 import numpy as np
 import cv2
-from common import anorm, getsize
+from removebg import remove_bg
 
 FLANN_INDEX_KDTREE = 1  # bug: flann enums are missing
 FLANN_INDEX_LSH    = 6
@@ -82,9 +82,10 @@ if __name__ == '__main__':
     except:
         fn1 = '../data/box.png'
         fn2 = '../data/box_in_scene.png'
-
-    img1 = cv2.imread(fn1, 0)
-    img2 = cv2.imread(fn2, 0)
+    img1 = remove_bg(fn1)
+    img2 = remove_bg(fn2)
+    #img1 = cv2.imread(fn1, 0)
+    #img2 = cv2.imread(fn2, 0)
     detector, matcher = init_feature(feature_name)
 
     if img1 is None:
@@ -99,6 +100,7 @@ if __name__ == '__main__':
         print('unknown feature:', feature_name)
         sys.exit(1)
 
+  
     print('using', feature_name)
 
     kp1, desc1 = detector.detectAndCompute(img1, None)
