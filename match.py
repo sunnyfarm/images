@@ -33,7 +33,7 @@ def init_feature(name):
         detector = cv2.xfeatures2d.SURF_create(800)
         norm = cv2.NORM_L2
     elif chunks[0] == 'orb':
-        detector = cv2.ORB_create(nfeatures=1000, WTA_K=3) #, scoreType=cv2.ORB_FAST_SCORE)
+        detector = cv2.ORB_create(nfeatures=10000, WTA_K=3, scoreType=cv2.ORB_FAST_SCORE)
         norm = cv2.NORM_HAMMING2
     elif chunks[0] == 'akaze':
         detector = cv2.AKAZE_create()
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     def match_and_draw(win):
         print('matching...')
         raw_matches = matcher.knnMatch(desc1, trainDescriptors = desc2, k = 2) #2
-        ratio = 0.75
+        ratio = 0.7
         p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches, ratio)
         good = []
         for m,n in raw_matches:
