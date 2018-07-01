@@ -33,8 +33,8 @@ def init_feature(name):
         detector = cv2.xfeatures2d.SURF_create(800)
         norm = cv2.NORM_L2
     elif chunks[0] == 'orb':
-        detector = cv2.ORB_create(400)
-        norm = cv2.NORM_HAMMING
+        detector = cv2.ORB_create(nfeatures=1000, WTA_K=3) #, scoreType=cv2.ORB_FAST_SCORE)
+        norm = cv2.NORM_HAMMING2
     elif chunks[0] == 'akaze':
         detector = cv2.AKAZE_create()
         norm = cv2.NORM_HAMMING
@@ -104,13 +104,25 @@ if __name__ == '__main__':
     print('using', feature_name)
 
     kp1, desc1 = detector.detectAndCompute(img1, None)
+    cv2.imwrite('kp-' + fn1, cv2.drawKeypoints(img1, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
     kp2, desc2 = detector.detectAndCompute(img2, None)
-    print('%s - %d features %s - %d features' % (fn1, len(kp1), fn2, len(kp2)))
-
+    cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img1, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
+    
     def match_and_draw(win):
         print('matching...')
         raw_matches = matcher.knnMatch(desc1, trainDescriptors = desc2, k = 2) #2
-        p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
+        ratio = 0.75
+        p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches, ratio)
+        good = []
+        for m,n in raw_matches:
+            if m.distance < ratio*n.distance:
+                good.append([m])
+        img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None, flags=2)
+
+        print('%s - %d features %s - %d features. knn matches %d' % (fn1, len(kp1), fn2, len(kp2), len(good)))
+
+        # Show the image
+        cv2.imwrite('matched.jpg', img3)
 
         if len(p1) >= 2:
             H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
