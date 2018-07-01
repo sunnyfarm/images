@@ -1,6 +1,18 @@
 import cv2
 import numpy as np
 
+def auto_canny(image, sigma=0.33):
+	# compute the median of the single channel pixel intensities
+	v = np.median(image)
+ 
+	# apply automatic Canny edge detection using the computed median
+	lower = int(max(0, (1.0 - sigma) * v))
+	upper = int(min(255, (1.0 + sigma) * v))
+	edged = cv2.Canny(image, lower, upper)
+ 
+	# return the edged image
+	return edged
+
 def remove_bg(input):
 
     #== Parameters =======================================================================
@@ -17,12 +29,13 @@ def remove_bg(input):
     #-- Read image -----------------------------------------------------------------------
     img = cv2.imread(input)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
     #-- Edge detection -------------------------------------------------------------------
     edges = cv2.Canny(gray, CANNY_THRESH_1, CANNY_THRESH_2)
     edges = cv2.dilate(edges, None)
     edges = cv2.erode(edges, None)
-
+    
+    #edges = auto_canny(blurred)
     #-- Find contours in edges, sort by area ---------------------------------------------
     contour_info = []
     i, contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)

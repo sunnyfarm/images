@@ -76,7 +76,7 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
-    feature_name = opts.get('--feature', 'surf-flann')
+    feature_name = opts.get('--feature', 'orb')
     try:
         fn1, fn2 = args
     except:
@@ -105,12 +105,13 @@ if __name__ == '__main__':
 
     kp1, desc1 = detector.detectAndCompute(img1, None)
     kp2, desc2 = detector.detectAndCompute(img2, None)
-    print('img1 - %d features, img2 - %d features' % (len(kp1), len(kp2)))
+    print('%s - %d features %s - %d features' % (fn1, len(kp1), fn2, len(kp2)))
 
     def match_and_draw(win):
         print('matching...')
         raw_matches = matcher.knnMatch(desc1, trainDescriptors = desc2, k = 2) #2
         p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches)
+
         if len(p1) >= 2:
             H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
             print('%d%% matched' % (np.sum(status) / len(status) * 100))
