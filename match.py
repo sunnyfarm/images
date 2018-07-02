@@ -27,7 +27,7 @@ FLANN_INDEX_LSH    = 6
 def init_feature(name):
     chunks = name.split('-')
     if chunks[0] == 'sift':
-        detector = cv2.xfeatures2d.SIFT_create()
+        detector = cv2.xfeatures2d.SIFT_create(edgeThreshold=5)
         norm = cv2.NORM_L2
     elif chunks[0] == 'surf':
         detector = cv2.xfeatures2d.SURF_create(800)
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
-    feature_name = opts.get('--feature', 'orb')
+    feature_name = opts.get('--feature', 'sift')
     try:
         fn1, fn2 = args
     except:
