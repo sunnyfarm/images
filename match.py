@@ -1,17 +1,5 @@
 #!/usr/bin/env python
 
-'''
-Feature-based image matching sample.
-
-Note, that you will need install opencv3 with `brew install opencv`
-
-USAGE
-  find_obj.py [--feature=<sift|surf|orb|akaze|brisk>[-flann]] [ <image1> <image2> ]
-
-  --feature  - Feature to use. Can be sift, surf, orb or brisk. Append '-flann'
-               to feature name to use Flann-based matcher instead bruteforce.
-
-'''
 
 # Python 2/3 compatibility
 from __future__ import print_function
@@ -125,8 +113,9 @@ if __name__ == '__main__':
         cv2.imwrite('matched.jpg', img3)
 
         if len(p1) >= 2:
-            H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
-            print('%d%% matched' % (np.sum(status) / len(status) * 100))
+            #H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
+            _, status = cv2.findHomography(p1, p2, cv2.LMEDS)
+            print('%d%% matched, good matches %s' % (np.sum(status) / len(status) * 100, np.sum(status)))
         else:
             H, status = None, None
             print('%d matches found, not enough for homography estimation' % len(p1))
