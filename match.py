@@ -94,7 +94,7 @@ if __name__ == '__main__':
     kp1, desc1 = detector.detectAndCompute(img1, None)
     cv2.imwrite('kp-' + fn1, cv2.drawKeypoints(img1, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
     kp2, desc2 = detector.detectAndCompute(img2, None)
-    cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img1, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
+    cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img2, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
     
     def match_and_draw(win):
         print('matching...')
