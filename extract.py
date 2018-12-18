@@ -46,6 +46,8 @@ def seg_img(img, fn):
         (x, y, w, h) = cv2.boundingRect(c)
         # only accept the contour region as a grouping of characters if
         # the ROI is sufficiently large
+        if w < 50 or h < 50:
+            continue
         found = False
         for (j, d) in enumerate(groupCnts):
         # compute the bounding box of the contour
@@ -61,18 +63,23 @@ def seg_img(img, fn):
             groupLocs.append((x, y, w, h))
     return clone, groupLocs
 
-parser = argparse.ArgumentParser(description='color segmentation')
-parser.add_argument('--input', help='Path to input image.', default='image.jpg')
-args = parser.parse_args()
-img = cv2.imread(args.input)
-if img is None:
-    print('Could not open or find the image:', args.input)
-    exit(0)
-fn = args.input
-image, locs = seg_img(img, fn)
-c = 0
-for i in locs:
-    im = image[i[1]:i[1] + i[3], i[0]:i[0] + i[2]]   
-    cv2.imwrite("seg-" +str(c) + "-" + fn, im)
-    c = c + 1
-print locs
+def test_it():
+    parser = argparse.ArgumentParser(description='color segmentation')
+    parser.add_argument('--input', help='Path to input image.', default='image.jpg')
+    args = parser.parse_args()
+    img = cv2.imread(args.input)
+    if img is None:
+        print('Could not open or find the image:', args.input)
+        exit(0)
+    fn = args.input
+    image, locs = seg_img(img, fn)
+    c = 0
+    for i in locs:
+        im = image[i[1]:i[1] + i[3], i[0]:i[0] + i[2]]   
+        cv2.normalize(im, im, 0, 255, cv2.NORM_MINMAX)
+        cv2.imwrite("seg-" +str(c) + "-" + fn, im)
+        c = c + 1
+    print locs
+
+if __name__ == '__main__':
+    test_it()
