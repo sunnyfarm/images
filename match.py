@@ -84,7 +84,7 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
-    feature_name = opts.get('--feature', 'sift')
+    feature_name = opts.get('--feature', 'orb')
     fn1, fn2 = args
     #img1 = remove_bg(fn1)
     #img2 = remove_bg(fn2)
@@ -128,12 +128,20 @@ if __name__ == '__main__':
                 matched = 0
                 matches = 0
                 good = []
-            if matched > 90 and matches > 50:
-                print("src " + str(si) + " dst " + str(di))
-                print('%d%% matched, good matches %s' % (matched, matches))
+            
+            print("src %d features %d, dst %d features %d" % (si, len(desc1), di, len(desc2)))
+            avg_features = (len(desc1) + len(desc2))/2
+            matched_ratio = matches / avg_features
+            if matched > 80 and matched_ratio > 0.7:    
                 img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                 # Show the image
-                cv2.imwrite("matched-" + str(si) + "-" + str(di) + ".jpg", img3)
+                print('%d%% matched, good matches %s, matched_ratio %s' % (matched, matches, matched_ratio))
+                cv2.imwrite("matched-" + str(int(matched)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
+            else:
+                if matches > 0:
+                    img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
+                    print('%d%% matched, good matches %s matched_ratio %s' % (matched, matches, matched_ratio))
+                    cv2.imwrite("matched-bad-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img3)
 
         si = si + 1
             # cv2.waitKey()
