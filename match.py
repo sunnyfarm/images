@@ -59,7 +59,6 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     return p1, p2, list(kp_pairs)
 
 def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
-    print('matching...')
     raw_matches = matcher.knnMatch(
         desc1, trainDescriptors=desc2, k=2)  # 2
     ratio = 0.7
@@ -68,18 +67,15 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
     for m, n in raw_matches:
         if m.distance < ratio*n.distance:
             good.append([m])
-    img3 = cv2.drawMatchesKnn(
-        img1, kp1, img2, kp2, good, None, flags=2)
-
+    
     if len(p1) >= 2:
         #H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
         _, status = cv2.findHomography(p1, p2, cv2.LMEDS)
-        print('%d%% matched, good matches %s' %
-                (np.sum(status) / len(status) * 100, np.sum(status)))
-        # Show the image
-        cv2.imwrite("matched-" + str(si) + "-" + str(di) + ".jpg", img3)
+        matched = np.sum(status) / len(status) * 100
+        matches = np.sum(status)
+        return matched, matches, good
     else:
-        H, status = None, None
+        return 0, 0, good
         #print('%d matches found, not enough for homography estimation' % len(p1))
 
 if __name__ == '__main__':
@@ -120,16 +116,25 @@ if __name__ == '__main__':
         for j in dstLoc:
             img2 = dstImg[j[1]:j[1] + j[3], j[0]:j[0] + j[2]]   
             cv2.normalize(img2, img2, 0, 255, cv2.NORM_MINMAX)
-            print("src " + str(si) + " dst " + str(di))
+            
             kp1, desc1 = detector.detectAndCompute(img1, None)
             cv2.imwrite('kp-' + fn1, cv2.drawKeypoints(img1, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
             kp2, desc2 = detector.detectAndCompute(img2, None)
             cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img2, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
             di = di + 1
             try:
-                match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)
+                matched, matches, good = match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)
             except:
-                continue
+                matched = 0
+                matches = 0
+                good = []
+            if matched > 90 and matches > 50:
+                print("src " + str(si) + " dst " + str(di))
+                print('%d%% matched, good matches %s' % (matched, matches))
+                img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
+                # Show the image
+                cv2.imwrite("matched-" + str(si) + "-" + str(di) + ".jpg", img3)
+
         si = si + 1
             # cv2.waitKey()
     # cv2.destroyAllWindows()
