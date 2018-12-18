@@ -31,8 +31,6 @@ def seg_img(img, fn):
 
     # find contours in the thresholded image, then initialize the
     # list of group locations
-    clone = np.dstack([gray.copy()] * 3)
-
     groupCnts = cv2.findContours(gray.copy(),  
         #cv2.RETR_EXTERNAL, 
         cv2.RETR_TREE,
@@ -59,10 +57,9 @@ def seg_img(img, fn):
                     found = True
                     break
         if found == False:
-            cv2.rectangle(clone, (x,y), (x+w, y+h), (255,0,0), 1)
-            #groupLocs.append((x, y, w, h))
-
-    cv2.imwrite("seg-" + fn, clone)
+            #cv2.rectangle(clone, (x,y), (x+w, y+h), (255,0,0), 1)
+            groupLocs.append((x, y, w, h))
+    return clone, groupLocs
 
 parser = argparse.ArgumentParser(description='color segmentation')
 parser.add_argument('--input', help='Path to input image.', default='image.jpg')
@@ -72,4 +69,10 @@ if img is None:
     print('Could not open or find the image:', args.input)
     exit(0)
 fn = args.input
-seg_img(img, fn)
+image, locs = seg_img(img, fn)
+c = 0
+for i in locs:
+    im = image[i[1]:i[1] + i[3], i[0]:i[0] + i[2]]   
+    cv2.imwrite("seg-" +str(c) + "-" + fn, im)
+    c = c + 1
+print locs
