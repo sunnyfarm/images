@@ -65,11 +65,7 @@ if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
     feature_name = opts.get('--feature', 'sift')
-    try:
-        fn1, fn2 = args
-    except:
-        fn1 = '../data/box.png'
-        fn2 = '../data/box_in_scene.png'
+    fn1, fn2 = args
     img1 = remove_bg(fn1)
     img2 = remove_bg(fn2)
     #img1 = cv2.imread(fn1, 0)

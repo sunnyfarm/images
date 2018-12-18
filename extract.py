@@ -26,22 +26,14 @@ def seg_img(img, fn):
     output_hsv[np.where(mask==0)] = 0
     cv2.imwrite("images-hsv-"+fn, output_hsv)
     
-    gray = cv2.cvtColor(output_hsv, cv2.COLOR_BGR2GRAY)
+    #gray = cv2.cvtColor(output_hsv, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
 
-    #kernel = np.ones((5,5), np.uint8)
-    #img_erode = cv2.erode(gray.copy(), kernel, iterations=1)
-    #dilate = cv2.dilate(img_erode, kernel, iterations=1)
-    #blur = cv2.bilateralFilter(dilate,9,75,75)
-    #cv2.imwrite("dilate-" + fn, dilate)
-
-    blur = cv2.GaussianBlur(gray,(3,3), 0)
-    thresh = cv2.adaptiveThreshold(blur,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
-                cv2.THRESH_BINARY_INV, 7,10)
     # find contours in the thresholded image, then initialize the
     # list of group locations
     clone = np.dstack([gray.copy()] * 3)
 
-    groupCnts = cv2.findContours(thresh.copy(),  
+    groupCnts = cv2.findContours(gray.copy(),  
         #cv2.RETR_EXTERNAL, 
         cv2.RETR_TREE,
         cv2.CHAIN_APPROX_NONE)
