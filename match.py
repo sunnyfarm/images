@@ -118,9 +118,9 @@ if __name__ == '__main__':
             cv2.normalize(img2, img2, 0, 255, cv2.NORM_MINMAX)
             
             kp1, desc1 = detector.detectAndCompute(img1, None)
-            cv2.imwrite('kp-' + fn1, cv2.drawKeypoints(img1, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
+            #cv2.imwrite('kp-' + fn1, cv2.drawKeypoints(img1, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
             kp2, desc2 = detector.detectAndCompute(img2, None)
-            cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img2, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
+            #cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img2, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
             di = di + 1
             try:
                 matched, matches, good = match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)

@@ -20,11 +20,11 @@ def seg_img(img, fn):
 
     output_img = img.copy()
     output_img[np.where(mask==0)] = 0
-    cv2.imwrite("images-out-"+fn, output_img)
+    #cv2.imwrite("images-out-"+fn, output_img)
 
     output_hsv = img_hsv.copy()
     output_hsv[np.where(mask==0)] = 0
-    cv2.imwrite("images-hsv-"+fn, output_hsv)
+    #cv2.imwrite("images-hsv-"+fn, output_hsv)
     
     #gray = cv2.cvtColor(output_hsv, cv2.COLOR_BGR2GRAY)
     gray = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
