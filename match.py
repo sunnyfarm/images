@@ -70,12 +70,16 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
     
     if len(p1) >= 2:
         #H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
-        _, status = cv2.findHomography(p1, p2, cv2.LMEDS)
+        h, status = cv2.findHomography(p1, p2, cv2.LMEDS)
         matched = np.sum(status) / len(status) * 100
         matches = np.sum(status)
-        return matched, matches, good
+        try:
+            imgWarp = cv2.warpPerspective(img1, h, (img2.shape[1],img2.shape[0]))
+        except:
+            imgWarp = img1
+        return matched, matches, good, imgWarp
     else:
-        return 0, 0, good
+        return 0, 0, good, img2
         #print('%d matches found, not enough for homography estimation' % len(p1))
 
 if __name__ == '__main__':
@@ -123,17 +127,19 @@ if __name__ == '__main__':
             #cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img2, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
             di = di + 1
             try:
-                matched, matches, good = match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)
+                matched, matches, good, imgWarp = match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)
             except:
                 matched = 0
                 matches = 0
                 good = []
-            
+                imgWarp = img1
+
             print("src %d features %d, dst %d features %d" % (si, len(desc1), di, len(desc2)))
             avg_features = (len(desc1) + len(desc2))/2
             matched_ratio = matches / avg_features
             if matched > 80 and matched_ratio > 0.7:    
-                img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
+                #img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
+                img3 = cv2.hconcat([imgWarp, img2])
                 # Show the image
                 print('%d%% matched, good matches %s, matched_ratio %s' % (matched, matches, matched_ratio))
                 cv2.imwrite("matched-" + str(int(matched)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
