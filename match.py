@@ -3,7 +3,7 @@
 
 # Python 2/3 compatibility
 from __future__ import print_function
-
+from pprint import pprint
 import numpy as np
 import cv2
 from removebg import remove_bg
@@ -53,33 +53,39 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
             m = m[0]
             mkp1.append( kp1[m.queryIdx] )
             mkp2.append( kp2[m.trainIdx] )
+        
     p1 = np.float32([kp.pt for kp in mkp1])
     p2 = np.float32([kp.pt for kp in mkp2])
-    kp_pairs = zip(mkp1, mkp2)
-    return p1, p2, list(kp_pairs)
+    
+    return p1, p2
 
 def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
     raw_matches = matcher.knnMatch(
         desc1, trainDescriptors=desc2, k=2)  # 2
-    ratio = 0.7
-    p1, p2, kp_pairs = filter_matches(kp1, kp2, raw_matches, ratio)
+    ratio = 0.85
+    p1, p2 = filter_matches(kp1, kp2, raw_matches, ratio)
     good = []
     for m, n in raw_matches:
         if m.distance < ratio*n.distance:
             good.append([m])
     
     if len(p1) >= 2:
-        #H, status = cv2.findHomography(p1, p2, cv2.RANSAC, 5.0)
-        h, status = cv2.findHomography(p1, p2, cv2.LMEDS)
+        h, status = cv2.findHomography(p1, p2, cv2.RANSAC) #, cv2.RANSAC, 5.0)
+        inliner = []
+        for i in range(status.size):
+            if status[i] > 0:
+                inliner.append(good[i])
+        #h, status = cv2.findHomography(p1, p2, cv2.LMEDS)
         matched = np.sum(status) / len(status) * 100
         matches = np.sum(status)
+        
         try:
             imgWarp = cv2.warpPerspective(img1, h, (img2.shape[1],img2.shape[0]))
         except:
-            imgWarp = img1
-        return matched, matches, good, imgWarp
+            imgWarp = img2
+        return matched, matches, inliner, imgWarp
     else:
-        return 0, 0, good, img2
+        return 0, 0, good, img1
         #print('%d matches found, not enough for homography estimation' % len(p1))
 
 if __name__ == '__main__':
@@ -114,10 +120,16 @@ if __name__ == '__main__':
     print('using', feature_name)
     si = 0
     for i in srcLoc:
-        img1 = srcImg[i[1]:i[1] + i[3], i[0]:i[0] + i[2]]   
+        img1 = srcImg[i[1]:i[1] + i[3], i[0]:i[0] + i[2]] 
+        if i[3] < 100 or i[2] < 100:
+            print("src too small")
+            continue
         cv2.normalize(img1, img1, 0, 255, cv2.NORM_MINMAX)
         di = 0
         for j in dstLoc:
+            if j[3] < 100 or j[2] < 100:
+                print("dst too small")
+                continue
             img2 = dstImg[j[1]:j[1] + j[3], j[0]:j[0] + j[2]]   
             cv2.normalize(img2, img2, 0, 255, cv2.NORM_MINMAX)
             
@@ -132,12 +144,14 @@ if __name__ == '__main__':
                 matched = 0
                 matches = 0
                 good = []
+                raw = []
                 imgWarp = img1
 
             print("src %d features %d, dst %d features %d" % (si, len(desc1), di, len(desc2)))
-            avg_features = (len(desc1) + len(desc2))/2
-            matched_ratio = matches / avg_features
-            if matched > 80 and matched_ratio > 0.7:    
+            min_features = len(desc1) #(len(desc1) + len(desc2))/2
+            matched_ratio = matches / min_features
+            
+            if matched > 80 and matched_ratio > 0.5:    
                 #img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                 img3 = cv2.hconcat([imgWarp, img2])
                 # Show the image
@@ -146,8 +160,11 @@ if __name__ == '__main__':
             else:
                 if matches > 0:
                     img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
+                    
                     print('%d%% matched, good matches %s matched_ratio %s' % (matched, matches, matched_ratio))
                     cv2.imwrite("matched-bad-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img3)
+                    #img4 = cv2.hconcat([imgWarp, img2])
+                    #cv2.imwrite("matched-warp-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img4)
 
         si = si + 1
             # cv2.waitKey()
