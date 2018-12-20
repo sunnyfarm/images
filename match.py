@@ -42,7 +42,7 @@ def init_feature(name):
                                multi_probe_level = 1) #2
         matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
     else:
-        matcher = cv2.DescriptorMatcher_create(cv2.DescriptorMatcher_BRUTEFORCE_HAMMING) #cv2.BFMatcher(norm)
+        matcher = cv2.BFMatcher(norm) #cv2.DescriptorMatcher_create(cv2.DescriptorMatcher_BRUTEFORCE_HAMMING)
     return detector, matcher
 
 
@@ -175,7 +175,7 @@ if __name__ == '__main__':
                     img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                     
                     print('%d%% matched, good matches %s matched_ratio %s' % (matched, matches, min_matched_ratio))
-                    cv2.imwrite("matched-maybe-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
+                    cv2.imwrite("matched-" + feature_name+"-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
                     #img4 = cv2.hconcat([imgWarp, img2])
                     #cv2.imwrite("matched-warp-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img4)
             di = di + 1
