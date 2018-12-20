@@ -11,7 +11,7 @@ from extract import seg_img
 
 FLANN_INDEX_KDTREE = 1  # bug: flann enums are missing
 FLANN_INDEX_LSH    = 6
-MIN_KP_SIZE = 10
+min_kp_size = 10
 
 def init_feature(name):
     chunks = name.split('-')
@@ -51,7 +51,7 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
             n = m[0]
-            if kp1[n.queryIdx] > MIN_KP_SIZE:
+            if kp1[n.queryIdx] > min_kp_size:
                 mkp1.append( kp1[n.queryIdx] )
                 mkp2.append( kp2[n.trainIdx] )
         
@@ -128,9 +128,11 @@ if __name__ == '__main__':
             continue
         cv2.normalize(img1, img1, 0, 255, cv2.NORM_MINMAX)
         kp1, desc1 = detector.detectAndCompute(img1, None)
+        min_kp_size = int((i[3]*i[2])/40000)
+        print(min_kp_size)
         goodKp1 = 0
         for ki in range (len(kp1)):
-            if kp1[ki].size > MIN_KP_SIZE:
+            if kp1[ki].size > min_kp_size:
                 goodKp1 = goodKp1 + 1
         di = 0
         for j in dstLoc:
@@ -155,7 +157,7 @@ if __name__ == '__main__':
                 imgWarp = img1
             goodKp2 = 0
             for ki in range (len(kp2)):
-                if kp2[ki].size > MIN_KP_SIZE:
+                if kp2[ki].size > min_kp_size:
                     goodKp2 = goodKp2 + 1
             print("src %d big kp %d features %d, dst %d big kp %d features %d" % (si, goodKp1, len(desc1), di, goodKp2, len(desc2)))
             min_features = goodKp1 #len(desc1) #(len(desc1) + len(desc2))/2
@@ -171,7 +173,7 @@ if __name__ == '__main__':
                 print('%d%% matched, good matches %s, matched_ratio %s' % (matched, matches, max_matched_ratio))
                 cv2.imwrite("matched-" + str(int(matched)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
             else:
-                if matched > 10 and min_matched_ratio > 0.1:
+                if matched > 10 and min_matched_ratio > 0.3:
                     img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                     
                     print('%d%% matched, good matches %s matched_ratio %s' % (matched, matches, min_matched_ratio))
