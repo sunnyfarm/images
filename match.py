@@ -11,7 +11,7 @@ from extract import seg_img
 
 FLANN_INDEX_KDTREE = 1  # bug: flann enums are missing
 FLANN_INDEX_LSH    = 6
-
+MIN_KP_SIZE = 10
 
 def init_feature(name):
     chunks = name.split('-')
@@ -19,10 +19,10 @@ def init_feature(name):
         detector = cv2.xfeatures2d.SIFT_create(edgeThreshold=5)
         norm = cv2.NORM_L2
     elif chunks[0] == 'surf':
-        detector = cv2.xfeatures2d.SURF_create(800)
+        detector = cv2.xfeatures2d.SURF_create()
         norm = cv2.NORM_L2
     elif chunks[0] == 'orb':
-        detector = cv2.ORB_create(nfeatures=10000, WTA_K=3, scoreType=cv2.ORB_FAST_SCORE)
+        detector = cv2.ORB_create(nfeatures=1000, WTA_K=3, scoreType=cv2.ORB_FAST_SCORE)
         norm = cv2.NORM_HAMMING2
     elif chunks[0] == 'akaze':
         detector = cv2.AKAZE_create()
@@ -42,7 +42,7 @@ def init_feature(name):
                                multi_probe_level = 1) #2
         matcher = cv2.FlannBasedMatcher(flann_params, {})  # bug : need to pass empty dict (#1329)
     else:
-        matcher = cv2.BFMatcher(norm)
+        matcher = cv2.DescriptorMatcher_create(cv2.DescriptorMatcher_BRUTEFORCE_HAMMING) #cv2.BFMatcher(norm)
     return detector, matcher
 
 
@@ -50,9 +50,10 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     mkp1, mkp2 = [], []
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
-            m = m[0]
-            mkp1.append( kp1[m.queryIdx] )
-            mkp2.append( kp2[m.trainIdx] )
+            n = m[0]
+            if kp1[n.queryIdx] > MIN_KP_SIZE:
+                mkp1.append( kp1[n.queryIdx] )
+                mkp2.append( kp2[n.trainIdx] )
         
     p1 = np.float32([kp.pt for kp in mkp1])
     p2 = np.float32([kp.pt for kp in mkp2])
@@ -62,7 +63,7 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
 def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
     raw_matches = matcher.knnMatch(
         desc1, trainDescriptors=desc2, k=2)  # 2
-    ratio = 0.85
+    ratio = 0.7
     p1, p2 = filter_matches(kp1, kp2, raw_matches, ratio)
     good = []
     for m, n in raw_matches:
@@ -70,12 +71,13 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
             good.append([m])
     
     if len(p1) >= 2:
-        h, status = cv2.findHomography(p1, p2, cv2.RANSAC) #, cv2.RANSAC, 5.0)
+        h, status = cv2.findHomography(p1, p2, cv2.RANSAC, 10.0)
+        #h, status = cv2.findHomography(p1, p2, cv2.LMEDS)
         inliner = []
         for i in range(status.size):
             if status[i] > 0:
                 inliner.append(good[i])
-        #h, status = cv2.findHomography(p1, p2, cv2.LMEDS)
+        
         matched = np.sum(status) / len(status) * 100
         matches = np.sum(status)
         
@@ -94,7 +96,7 @@ if __name__ == '__main__':
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
-    feature_name = opts.get('--feature', 'orb')
+    feature_name = opts.get('--feature', 'akaze')
     fn1, fn2 = args
     #img1 = remove_bg(fn1)
     #img2 = remove_bg(fn2)
@@ -125,6 +127,11 @@ if __name__ == '__main__':
             print("src too small")
             continue
         cv2.normalize(img1, img1, 0, 255, cv2.NORM_MINMAX)
+        kp1, desc1 = detector.detectAndCompute(img1, None)
+        goodKp1 = 0
+        for ki in range (len(kp1)):
+            if kp1[ki].size > MIN_KP_SIZE:
+                goodKp1 = goodKp1 + 1
         di = 0
         for j in dstLoc:
             if j[3] < 100 or j[2] < 100:
@@ -133,11 +140,11 @@ if __name__ == '__main__':
             img2 = dstImg[j[1]:j[1] + j[3], j[0]:j[0] + j[2]]   
             cv2.normalize(img2, img2, 0, 255, cv2.NORM_MINMAX)
             
-            kp1, desc1 = detector.detectAndCompute(img1, None)
+            
             #cv2.imwrite('kp-' + fn1, cv2.drawKeypoints(img1, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
             kp2, desc2 = detector.detectAndCompute(img2, None)
             #cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img2, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
-            di = di + 1
+            
             try:
                 matched, matches, good, imgWarp = match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)
             except:
@@ -146,25 +153,32 @@ if __name__ == '__main__':
                 good = []
                 raw = []
                 imgWarp = img1
-
-            print("src %d features %d, dst %d features %d" % (si, len(desc1), di, len(desc2)))
-            min_features = len(desc1) #(len(desc1) + len(desc2))/2
-            matched_ratio = matches / min_features
+            goodKp2 = 0
+            for ki in range (len(kp2)):
+                if kp2[ki].size > MIN_KP_SIZE:
+                    goodKp2 = goodKp2 + 1
+            print("src %d big kp %d features %d, dst %d big kp %d features %d" % (si, goodKp1, len(desc1), di, goodKp2, len(desc2)))
+            min_features = goodKp1 #len(desc1) #(len(desc1) + len(desc2))/2
+            max_features = len(desc1)
+            min_matched_ratio = matches / min_features
+            max_matched_ratio = matches / max_features
             
-            if matched > 80 and matched_ratio > 0.5:    
+            # just need to tune matched and matched_raio
+            if matched > 80 and max_matched_ratio > 0.5:    
                 #img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                 img3 = cv2.hconcat([imgWarp, img2])
                 # Show the image
-                print('%d%% matched, good matches %s, matched_ratio %s' % (matched, matches, matched_ratio))
+                print('%d%% matched, good matches %s, matched_ratio %s' % (matched, matches, max_matched_ratio))
                 cv2.imwrite("matched-" + str(int(matched)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
             else:
-                if matches > 0:
+                if matched > 10 and min_matched_ratio > 0.1:
                     img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                     
-                    print('%d%% matched, good matches %s matched_ratio %s' % (matched, matches, matched_ratio))
-                    cv2.imwrite("matched-bad-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img3)
+                    print('%d%% matched, good matches %s matched_ratio %s' % (matched, matches, min_matched_ratio))
+                    cv2.imwrite("matched-maybe-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
                     #img4 = cv2.hconcat([imgWarp, img2])
                     #cv2.imwrite("matched-warp-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img4)
+            di = di + 1
 
         si = si + 1
             # cv2.waitKey()
