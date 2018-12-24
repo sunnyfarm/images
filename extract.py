@@ -71,6 +71,7 @@ def test_it():
     if img is None:
         print('Could not open or find the image:', args.input)
         exit(0)
+    srcClone = img.copy()
     fn = args.input
     image, locs = seg_img(img, fn)
     c = 0
@@ -78,8 +79,10 @@ def test_it():
         im = image[i[1]:i[1] + i[3], i[0]:i[0] + i[2]]   
         cv2.normalize(im, im, 0, 255, cv2.NORM_MINMAX)
         cv2.imwrite("seg-" +str(c) + "-" + fn, im)
+        cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (255,0,0), 1)
         c = c + 1
     print locs
+    cv2.imwrite("seg-all-" + fn, srcClone)
 
 if __name__ == '__main__':
     test_it()

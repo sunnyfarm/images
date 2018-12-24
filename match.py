@@ -51,7 +51,7 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
             n = m[0]
-            if kp1[n.queryIdx] > min_kp_size:
+            if kp1[n.queryIdx] > min_kp_size and kp2[n.trainIdx] > min_kp_size:
                 mkp1.append( kp1[n.queryIdx] )
                 mkp2.append( kp2[n.trainIdx] )
         
@@ -81,10 +81,11 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
         matched = np.sum(status) / len(status) * 100
         matches = np.sum(status)
         
-        try:
-            imgWarp = cv2.warpPerspective(img1, h, (img2.shape[1],img2.shape[0]))
-        except:
-            imgWarp = img2
+        #try:
+        #    imgWarp = cv2.warpPerspective(img1, h, (img2.shape[1],img2.shape[0]))
+        #except:
+        #    imgWarp = img2
+        imgWarp = img2
         return matched, matches, inliner, imgWarp
     else:
         return 0, 0, good, img1
@@ -103,7 +104,7 @@ if __name__ == '__main__':
     src = cv2.imread(fn1)
     dst = cv2.imread(fn2)
     detector, matcher = init_feature(feature_name)
-
+    
     if src is None:
         print('Failed to load fn1:', fn1)
         sys.exit(1)
@@ -173,13 +174,19 @@ if __name__ == '__main__':
                 print('%d%% matched, good matches %s, matched_ratio %s' % (matched, matches, max_matched_ratio))
                 cv2.imwrite("matched-" + str(int(matched)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
             else:
-                if matched > 10 and min_matched_ratio > 0.3:
-                    img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
-                    
+                if matched > 10 and min_matched_ratio > 0.1:
                     print('%d%% matched, good matches %s matched_ratio %s' % (matched, matches, min_matched_ratio))
-                    cv2.imwrite("matched-" + feature_name+"-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
-                    #img4 = cv2.hconcat([imgWarp, img2])
-                    #cv2.imwrite("matched-warp-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img4)
+                    
+                    if fn1 != fn2 :
+                        img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
+                        cv2.imwrite("matched-" + feature_name+"-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
+                        #img4 = cv2.hconcat([imgWarp, img2])
+                        #cv2.imwrite("matched-warp-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img4)
+                    else:                  
+                        srcClone = src.copy()      
+                        cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (255,0,0), 1)
+                        cv2.rectangle(srcClone, (j[0], j[1]), (j[0] + j[2], j[1] + j[3]), (255,0,0), 1)
+                        cv2.imwrite("matched-" + feature_name+"-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", srcClone)
             di = di + 1
 
         si = si + 1
