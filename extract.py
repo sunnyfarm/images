@@ -79,7 +79,7 @@ def test_it():
         im = image[i[1]:i[1] + i[3], i[0]:i[0] + i[2]]   
         cv2.normalize(im, im, 0, 255, cv2.NORM_MINMAX)
         cv2.imwrite("seg-" +str(c) + "-" + fn, im)
-        cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (255,0,0), 1)
+        cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (0,0,0), 10)
         c = c + 1
     print locs
     cv2.imwrite("seg-all-" + fn, srcClone)
