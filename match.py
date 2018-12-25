@@ -219,8 +219,10 @@ if __name__ == '__main__':
             if best_matched > 10 and best_min_matched_ratio > 0.01:
                 print('%d%% matched, good matches %s matched_ratio %s' % (best_matched, best_matches, best_min_matched_ratio))
                 draw_color = bad_color
+                prefix = "failed-"
                 if best_matched > 70 and best_min_matched_ratio > 0.1:
                     draw_color = good_color
+                    prefix = "matched-"
                 if fn1 != fn2 :
                     #img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                     #cv2.imwrite("matched-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
@@ -230,12 +232,12 @@ if __name__ == '__main__':
                     #cv2.imwrite("matched-warp-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img4)
                     #dstClone = dst.copy()          
                     #cv2.rectangle(dstClone, (j[0], j[1]), (j[0] + j[2], j[1] + j[3]), draw_color, 10)
-                    cv2.imwrite("checked-" + str(int(best_matched))+ "-" +  str(int(best_min_matched_ratio*100)) + "-" + str(si) + "-" + str(best_index) + ".jpg", srcClone)
+                    cv2.imwrite(prefix + str(int(best_matched))+ "-" +  str(int(best_min_matched_ratio*100)) + "-" + str(si) + "-" + str(best_index) + ".jpg", srcClone)
                 else:                  
                     srcClone = src.copy()          
                     cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), draw_color, 10)
                     cv2.rectangle(srcClone, (j[0], j[1]), (j[0] + j[2], j[1] + j[3]), draw_color, 10)
-                    cv2.imwrite("checked-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", srcClone)
+                    cv2.imwrite(prefix + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", srcClone)
 
         si = si + 1
             # cv2.waitKey()

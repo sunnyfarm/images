@@ -61,6 +61,7 @@ def seg_img(img, fn):
         if found == False:
             #cv2.rectangle(clone, (x,y), (x+w, y+h), (255,0,0), 1)
             groupLocs.append((x, y, w, h))
+    #TODO find overlapping rectangles
     return clone, groupLocs
 
 def test_it():
