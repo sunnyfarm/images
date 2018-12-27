@@ -3,6 +3,7 @@ import argparse
 import cv2
 import imutils 
 
+
 def seg_img(img, fn):
     img_hsv=cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -40,29 +41,55 @@ def seg_img(img, fn):
     groupLocs = []
 
     clone = np.dstack([gray.copy()] * 3)
+    def union(a,b):
+        x = min(a[0], b[0])
+        y = min(a[1], b[1])
+        w = max(a[0]+a[2], b[0]+b[2]) - x
+        h = max(a[1]+a[3], b[1]+b[3]) - y
+        return (x, y, w, h)
+
+    def intersection(a,b):
+        x = max(a[0], b[0])
+        y = max(a[1], b[1])
+        w = min(a[0]+a[2], b[0]+b[2]) - x
+        h = min(a[1]+a[3], b[1]+b[3]) - y
+        if w < 0 or h < 0: 
+            return ()
+        return (x, y, w, h)
     # loop over the group contours
     for (i, c) in enumerate(groupCnts):
-        # compute the bounding box of the contour
-        (x, y, w, h) = cv2.boundingRect(c)
+        # compute the bounding box of the contour    
+        a = cv2.boundingRect(c)
         # only accept the contour region as a grouping of characters if
         # the ROI is sufficiently large
-        if w < 50 or h < 50:
+        if a[2] < 50 or a[3] < 50:
             continue
-        found = False
         for (j, d) in enumerate(groupCnts):
         # compute the bounding box of the contour
-            (x1, y1, w1, h1) = cv2.boundingRect(d)
-            if i== j:
+            if j == i:
                 continue
-            if x1 <= x and x1 + w1 >= x and y1 <= y and y1 + h1 >=  y :
-                if x + w >= x1 and x + w <= x1 + w1 and y + h >= y1 and y1 + h1 >= y + h: 
-                    found = True
-                    break
-        if found == False:
-            #cv2.rectangle(clone, (x,y), (x+w, y+h), (255,0,0), 1)
-            groupLocs.append((x, y, w, h))
-    #TODO find overlapping rectangles
-    return clone, groupLocs
+            b = cv2.boundingRect(d)
+            inter = intersection(a, b)
+            if len(inter) > 0:
+                a = union(a, b)
+#            if x1 <= x and x1 + w1 >= x and y1 <= y and y1 + h1 >=  y :
+#                if x + w >= x1 and x + w <= x1 + w1 and y + h >= y1 and y1 + h1 >= y + h: 
+#                    found = True
+#                    break
+        #if found == False:
+        #    groupLocs.append(a)
+        groupLocs.append(a)
+    groupRec = []
+    for i in range(len(groupLocs)):
+        found = False
+        for j in range(len(groupRec)):
+            if groupLocs[i][0] == groupRec[j][0] and groupLocs[i][1] == groupRec[j][1] and groupLocs[i][2]== groupRec[j][2] and groupLocs[i][3] == groupRec[j][3]:
+                found = True
+                break
+        if not found:
+            groupRec.append(groupLocs[i])
+
+    return clone, groupRec
 
 def test_it():
     parser = argparse.ArgumentParser(description='color segmentation')
