@@ -140,6 +140,8 @@ if __name__ == '__main__':
         for ki in range (len(kp1)):
             if kp1[ki].size > min_kp1_size:
                 goodKp1 = goodKp1 + 1
+        if goodKp1 == 0:
+            continue
         best_matches = 0
         best_matched = 0
         best_pt1 = (0,0)
@@ -164,7 +166,8 @@ if __name__ == '__main__':
             for ki in range (len(kp2)):
                 if kp2[ki].size > min_kp2_size:
                     goodKp2 = goodKp2 + 1
-            
+            if goodKp2 == 0:
+                continue
             try:
                 matched, matches, good, imgWarp = match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)
             except:
@@ -249,5 +252,3 @@ if __name__ == '__main__':
         pt1, pt2, color = i[0],i[1],i[2]
         cv2.rectangle(srcClone, pt1, pt2, color, 10)
     cv2.imwrite("result-" + fn1, srcClone)
-        # cv2.waitKey()
-    # cv2.destroyAllWindows()

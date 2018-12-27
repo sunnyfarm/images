@@ -28,10 +28,10 @@ def seg_img(img, fn):
     
     #gray = cv2.cvtColor(output_hsv, cv2.COLOR_BGR2GRAY)
     gray = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
-
+    blur = cv2.bilateralFilter(gray, 9, 75, 75)
     # find contours in the thresholded image, then initialize the
     # list of group locations
-    groupCnts = cv2.findContours(gray.copy(),  
+    groupCnts = cv2.findContours(blur, #gray.copy(),  
         #cv2.RETR_EXTERNAL, 
         cv2.RETR_TREE,
         cv2.CHAIN_APPROX_NONE)
