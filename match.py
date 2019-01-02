@@ -50,7 +50,7 @@ def init_feature(name):
     return detector, matcher
 
 
-def filter_matches(kp1, kp2, matches, ratio = 0.75):
+def filter_matches(kp1, min_kp1_size, kp2, min_kp2_size, matches, ratio = 0.75):
     mkp1, mkp2 = [], []
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
@@ -64,11 +64,11 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     
     return p1, p2
 
-def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
+def match_and_draw(kp1, desc1, min_kp1_size, kp2, desc2, min_kp2_size, img1, img2):
     raw_matches = matcher.knnMatch(
         desc1, trainDescriptors=desc2, k=2)  # 2
     ratio = 0.7
-    p1, p2 = filter_matches(kp1, kp2, raw_matches, ratio)
+    p1, p2 = filter_matches(kp1, min_kp1_size, kp2, min_kp2_size, raw_matches, ratio)
     good = []
     for m, n in raw_matches:
         if m.distance < ratio*n.distance:
@@ -122,8 +122,8 @@ if __name__ == '__main__':
         print('unknown feature:', feature_name)
         sys.exit(1)
     
-    srcImg, srcLoc = seg_img(src, fn1)
-    dstImg, dstLoc = seg_img(dst, fn2)
+    srcImg, srcLoc = seg_img(src.copy(), fn1)
+    dstImg, dstLoc = seg_img(dst.copy(), fn2)
     print("total sub images:" + str(len(srcLoc)) + " " + str(len(dstLoc)))
     print('using', feature_name)
     si = 0
@@ -156,8 +156,7 @@ if __name__ == '__main__':
                 continue
             img2 = dstImg[j[1]:j[1] + j[3], j[0]:j[0] + j[2]]   
             #cv2.normalize(img2, img2, 0, 255, cv2.NORM_MINMAX)
-            
-            
+                    
             #cv2.imwrite('kp-' + fn1, cv2.drawKeypoints(img1, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
             kp2, desc2 = detector.detectAndCompute(img2, None)
             #cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img2, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
@@ -169,7 +168,18 @@ if __name__ == '__main__':
             if goodKp2 == 0:
                 continue
             try:
-                matched, matches, good, imgWarp = match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)
+                
+                two_way_match = False
+                matched, matches, good, imgWarp = match_and_draw(kp1, desc1, min_kp1_size, kp2, desc2, min_kp2_size, img1, img2)
+                if two_way_match:
+                    matched2, matches2, good2, imgWarp2 = match_and_draw(kp2, desc2, min_kp2_size, kp1, desc1, min_kp1_size, img2, img1)
+                    if matched2 > matched:
+                        print("rematch " + str(matched) + " " + str(matched2))
+                        matched = matched2
+                        matches = matches2
+                        good = good2 
+                        min_features = goodKp1
+                        max_features = len(desc1)
             except:
                 matched = 0
                 matches = 0
