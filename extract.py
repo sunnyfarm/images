@@ -109,7 +109,7 @@ def test_it():
         cv2.imwrite("seg-" +str(c) + "-" + fn, im)
         cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (0,0,0), 10)
         c = c + 1
-    print locs
+    print(locs)
     cv2.imwrite("seg-all-" + fn, srcClone)
 
 if __name__ == '__main__':

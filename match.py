@@ -7,7 +7,7 @@ from pprint import pprint
 import numpy as np
 import cv2
 from removebg import remove_bg
-from extract import seg_img
+from extract2 import seg_img
 
 FLANN_INDEX_KDTREE = 1  # bug: flann enums are missing
 FLANN_INDEX_LSH    = 6
