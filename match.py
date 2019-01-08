@@ -7,7 +7,7 @@ from pprint import pprint
 import numpy as np
 import cv2
 from removebg import remove_bg
-from extract2 import seg_img
+from extract import seg_img
 
 FLANN_INDEX_KDTREE = 1  # bug: flann enums are missing
 FLANN_INDEX_LSH    = 6
@@ -226,7 +226,7 @@ if __name__ == '__main__':
                 print('%d%% matched, good matches %s matched_ratio %s' % (best_matched, best_matches, best_min_matched_ratio))
                 draw_color = bad_color
                 prefix = "failed-"
-                if (best_matched > 80 and best_min_matched_ratio > 0.1) or (best_matched > 95 and best_matches > 3):
+                if (best_matched > 80 and best_min_matched_ratio > 0.1) or (best_matched > 95 and best_matches > 10):
                     draw_color = good_color
                     prefix = "matched-"
                 draws.append((best_pt1, best_pt2, draw_color))

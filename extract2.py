@@ -21,6 +21,11 @@ def intersection(a,b):
 
 def merge(groupCnts, max_w, max_h):
     groupLocs = []
+    if len(groupCnts) == 1:
+        a = cv2.boundingRect(groupCnts[0])
+        groupLocs.append(a)
+        return groupLocs
+
     for (i, c) in enumerate(groupCnts):
         # compute the bounding box of the contour    
         a = cv2.boundingRect(c)
@@ -96,7 +101,7 @@ def seg_img(img, fn):
     clone = hsv_img(img.copy(), fn)
     height, width, channels = clone.shape
     contours = get_contours(img.copy())
-    groupRec = merge(contours, width/2, height/2)
+    groupRec = merge(contours, width*0.9, height*0.9)
     return clone, groupRec
     
 def box(img):
@@ -156,7 +161,7 @@ def test_it():
     c = 0
     for i in locs:
         im = image[i[1]:i[1] + i[3], i[0]:i[0] + i[2]]   
-        cv2.imwrite("seg-" +str(c) + "-" + fn, im)
+#        cv2.imwrite("seg-" +str(c) + "-" + fn, im)
         cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (0,0,0), 10)
         c = c + 1
     print(locs)

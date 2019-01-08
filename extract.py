@@ -13,7 +13,7 @@ def seg_img(img, fn):
     mask0 = cv2.inRange(img_hsv, lower_red, upper_red)
 
     # upper mask (170-180)
-    lower_red = np.array([170,50,50])
+    lower_red = np.array([160,50,50])
     upper_red = np.array([180,255,255])
     mask1 = cv2.inRange(img_hsv, lower_red, upper_red)
 
@@ -21,7 +21,7 @@ def seg_img(img, fn):
 
     output_img = img.copy()
     output_img[np.where(mask==0)] = 0
-    #cv2.imwrite("images-out-"+fn, output_img)
+    cv2.imwrite("images-out-"+fn, output_img)
 
     output_hsv = img_hsv.copy()
     output_hsv[np.where(mask==0)] = 0
