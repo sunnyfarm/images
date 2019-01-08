@@ -111,17 +111,17 @@ if __name__ == '__main__':
     detector, matcher = init_feature(feature_name)
     
     if src is None:
-        print('Failed to load fn1:', fn1)
+        print('Failed to load target image:', fn1)
         sys.exit(1)
 
     if dst is None:
-        print('Failed to load fn2:', fn2)
+        print('Failed to load truth image:', fn2)
         sys.exit(1)
 
     if detector is None:
         print('unknown feature:', feature_name)
         sys.exit(1)
-    
+   
     srcImg, srcLoc = seg_img(src, fn1)
     dstImg, dstLoc = seg_img(dst, fn2)
     print("total sub images:" + str(len(srcLoc)) + " " + str(len(dstLoc)))
@@ -134,6 +134,9 @@ if __name__ == '__main__':
             print("src too small")
             continue
         #cv2.normalize(img1, img1, 0, 255, cv2.NORM_MINMAX)
+        src_rows, src_cols = img1.shape[:2]
+        src_size = src_rows * src_cols
+        src_r = float(np.count_nonzero(img1)) / src_size
         kp1, desc1 = detector.detectAndCompute(img1, None)
         min_kp1_size = int((i[3]*i[2])/kp_divisor)
         goodKp1 = 0
@@ -154,22 +157,30 @@ if __name__ == '__main__':
             if j[3] < 100 or j[2] < 100:
                 print("dst too small")
                 continue
-            img2 = dstImg[j[1]:j[1] + j[3], j[0]:j[0] + j[2]]   
+            img2 = dstImg[j[1]:j[1] + j[3], j[0]:j[0] + j[2]]               
+            dst_rows, dst_cols = img2.shape[:2]
+            img2_resize = cv2.resize(img2.copy(), (src_cols, src_rows))
+            dst_r = float(np.count_nonzero(img2_resize)) / src_size
+            diff_r = src_r / dst_r
+            if diff_r > 1.2 or diff_r < 0.8:
+                continue
+            print("src: " + str(img1.shape[0]) + " " + str(img1.shape[1]) + " " + str(src_r))
+            print("dst: " + str(img2_resize.shape[0]) + " " + str(img2_resize.shape[1])  + " " + str(dst_r))
+
             #cv2.normalize(img2, img2, 0, 255, cv2.NORM_MINMAX)
-            
-            
+           
             #cv2.imwrite('kp-' + fn1, cv2.drawKeypoints(img1, kp1, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
-            kp2, desc2 = detector.detectAndCompute(img2, None)
+            kp2, desc2 = detector.detectAndCompute(img2_resize, None)
             #cv2.imwrite('kp-' + fn2, cv2.drawKeypoints(img2, kp2, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS))
             goodKp2 = 0
-            min_kp2_size = int((j[3]*j[2])/kp_divisor)
+            min_kp2_size = int((img2_resize.shape[0]*img2_resize.shape[1])/kp_divisor)
             for ki in range (len(kp2)):
                 if kp2[ki].size > min_kp2_size:
                     goodKp2 = goodKp2 + 1
             if goodKp2 == 0:
                 continue
             try:
-                matched, matches, good, imgWarp = match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di)
+                matched, matches, good, imgWarp = match_and_draw(kp1, desc1, kp2, desc2, img1, img2_resize, si, di)
             except:
                 matched = 0
                 matches = 0
@@ -226,7 +237,7 @@ if __name__ == '__main__':
                 print('%d%% matched, good matches %s matched_ratio %s' % (best_matched, best_matches, best_min_matched_ratio))
                 draw_color = bad_color
                 prefix = "failed-"
-                if (best_matched > 80 and best_min_matched_ratio > 0.1) or (best_matched > 95 and best_matches > 10):
+                if (best_matched > 80 and best_min_matched_ratio > 0.1) or (best_matched > 95 and best_matches > 10) or (best_matched > 75 and best_min_matched_ratio > 0.075 and best_matches > 20):
                     draw_color = good_color
                     prefix = "matched-"
                 draws.append((best_pt1, best_pt2, draw_color))
