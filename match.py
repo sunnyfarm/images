@@ -4,6 +4,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function
 from pprint import pprint
+from skimage.measure import compare_ssim
 import numpy as np
 import cv2
 from removebg import remove_bg
@@ -84,15 +85,31 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
         
         matched = np.sum(status) / len(status) * 100
         matches = np.sum(status)
-        
-        #try:
-        #    imgWarp = cv2.warpPerspective(img1, h, (img2.shape[1],img2.shape[0]))
-        #except:
-        #    imgWarp = img2
-        imgWarp = img2
-        return matched, matches, inliner, imgWarp
+        _r = 1.0
+        try:
+            imgWarp = cv2.warpPerspective(img1, h, (img2.shape[1],img2.shape[0]))
+            if imgWarp is not None and len(imgWarp) > 0:                
+                imgWarp = cv2.pyrDown(imgWarp)
+                img2_clone = cv2.pyrDown(img2)
+                #(score, diff) = compare_ssim(imgWarp, img2_clone, full=True)
+                #diff = (diff * 255).astype("uint8")
+                #cv2.imwrite("diffed-" + str(int(matched)) + "-" + str(int(_r * 100)) + ".jpg", diff)
+                
+                img2_bw = cv2.threshold(img2_clone, 127, 255, cv2.THRESH_BINARY)[1]
+                imgWarp_bw = cv2.threshold(imgWarp, 127, 255, cv2.THRESH_BINARY)[1]
+                mask_inv = cv2.bitwise_not(img2_bw)
+                xor = cv2.bitwise_and(imgWarp_bw, mask_inv)
+                img3 = cv2.hconcat([imgWarp, img2_clone, mask_inv, xor])
+                _rows, _cols = xor.shape[:2]
+                _size = _rows * _cols
+                _r = float(np.count_nonzero(xor) / _size)
+                cv2.imwrite("warped-" + str(int(matched)) + "-" + str(int(_r * 100)) + ".jpg", img3)
+                
+        except:
+            imgWarp = None
+        return matched, matches, inliner, _r
     else:
-        return 0, 0, good, img1
+        return 0, 0, good, img1, 1.0
         #print('%d matches found, not enough for homography estimation' % len(p1))
 
 if __name__ == '__main__':
@@ -136,7 +153,7 @@ if __name__ == '__main__':
         #cv2.normalize(img1, img1, 0, 255, cv2.NORM_MINMAX)
         src_rows, src_cols = img1.shape[:2]
         src_size = src_rows * src_cols
-        src_r = float(np.count_nonzero(img1)) / src_size
+        src_r = float(np.count_nonzero(img1) / src_size)
         kp1, desc1 = detector.detectAndCompute(img1, None)
         min_kp1_size = int((i[3]*i[2])/kp_divisor)
         goodKp1 = 0
@@ -152,6 +169,7 @@ if __name__ == '__main__':
         best_max_matched_ratio = 0
         best_min_matched_ratio = 0
         best_index = 0
+        best_residual = 0
         di = 0
         for j in dstLoc:
             if j[3] < 100 or j[2] < 100:
@@ -160,12 +178,13 @@ if __name__ == '__main__':
             img2 = dstImg[j[1]:j[1] + j[3], j[0]:j[0] + j[2]]               
             dst_rows, dst_cols = img2.shape[:2]
             img2_resize = cv2.resize(img2.copy(), (src_cols, src_rows))
-            dst_r = float(np.count_nonzero(img2_resize)) / src_size
+            dst_r = float(np.count_nonzero(img2_resize) / src_size)
             diff_r = src_r / dst_r
-            if diff_r > 1.2 or diff_r < 0.8:
-                continue
             print("src: " + str(img1.shape[0]) + " " + str(img1.shape[1]) + " " + str(src_r))
             print("dst: " + str(img2_resize.shape[0]) + " " + str(img2_resize.shape[1])  + " " + str(dst_r))
+            if diff_r > 1.2 or diff_r < 0.8:
+                print("size diff")
+                continue
 
             #cv2.normalize(img2, img2, 0, 255, cv2.NORM_MINMAX)
            
@@ -178,15 +197,16 @@ if __name__ == '__main__':
                 if kp2[ki].size > min_kp2_size:
                     goodKp2 = goodKp2 + 1
             if goodKp2 == 0:
+                print("no good kp")
                 continue
             try:
-                matched, matches, good, imgWarp = match_and_draw(kp1, desc1, kp2, desc2, img1, img2_resize, si, di)
+                matched, matches, good, residual = match_and_draw(kp1, desc1, kp2, desc2, img1, img2_resize, si, di)
             except:
                 matched = 0
                 matches = 0
                 good = []
                 raw = []
-                imgWarp = img1
+                residual = 1.0
             print("src %d big kp %d features %d, dst %d big kp %d features %d" % (si, goodKp1, len(desc1), di, goodKp2, len(desc2)))
             min_features = goodKp2 #len(desc1) #(len(desc1) + len(desc2))/2
             max_features = len(desc2)
@@ -199,6 +219,7 @@ if __name__ == '__main__':
                 best_pt1 = (i[0], i[1])
                 best_pt2 = (i[0] + i[2], i[1] + i[3])
                 best_min_matched_ratio = min_matched_ratio
+                best_residual = residual
             else:
                 pick_it = False
                 if matched > 80 and max_matched_ratio > 0.5:  
@@ -214,11 +235,12 @@ if __name__ == '__main__':
                     best_min_matched_ratio = max(min_matched_ratio, best_min_matched_ratio)
                     best_matched = max(matched, best_matched)
                     best_matches = max(matches, best_matches)
+                    best_residual = min(best_residual, residual)
             di = di + 1
 
         # just need to tune matched and matched_raio
         if best_matched > 80 and best_max_matched_ratio > 0.5:    
-            print('%d%% matched, good matches %s, matched_ratio %s' % (best_matched, best_matches, best_max_matched_ratio))
+            print('%d%% matched, good matches %s, matched_ratio %s residual %s' % (best_matched, best_matches, best_max_matched_ratio, best_residual))
             if fn1 != fn2 :
                 #img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                 #img3 = cv2.hconcat([imgWarp, img2])
@@ -232,9 +254,11 @@ if __name__ == '__main__':
                 cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), good_color, 10)
                 cv2.rectangle(srcClone, best_pt1, best_pt2, good_color, 10)
                 cv2.imwrite("good-" + str(int(best_matched))+ "-" + str(si) + "-" + str(best_index) + ".jpg", srcClone)
+                draws.append((best_pt1, best_pt2, good_color))
         else:
             #if best_matched > 10 and best_min_matched_ratio > 0.01:
-                print('%d%% matched, good matches %s matched_ratio %s' % (best_matched, best_matches, best_min_matched_ratio))
+            if best_residual < 0.25:
+                print('%d%% matched, good matches %s matched_ratio %s residual %s' % (best_matched, best_matches, best_min_matched_ratio, best_residual))
                 draw_color = bad_color
                 prefix = "failed-"
                 if (best_matched > 80 and best_min_matched_ratio > 0.1) or (best_matched > 95 and best_matches > 10) or (best_matched > 75 and best_min_matched_ratio > 0.075 and best_matches > 20):
