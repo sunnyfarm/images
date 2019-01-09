@@ -102,7 +102,9 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
                 img3 = cv2.hconcat([imgWarp, img2_clone, mask_inv, xor])
                 _rows, _cols = xor.shape[:2]
                 _size = _rows * _cols
-                _r = float(np.count_nonzero(xor) / _size)
+                _diff = np.count_nonzero(xor)
+                _orig_size = np.count_nonzero(img2_clone)
+                _r = float( _diff / _orig_size) # _diff / _size
                 cv2.imwrite("warped-" + str(int(matched)) + "-" + str(int(_r * 100)) + ".jpg", img3)
                 
         except:
@@ -111,6 +113,16 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
     else:
         return 0, 0, good, img1, 1.0
         #print('%d matches found, not enough for homography estimation' % len(p1))
+
+def illumination_correction(img, fn):
+    lab= cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    cl = clahe.apply(l)   
+    limg = cv2.merge((cl,a,b))
+    final = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+    cv2.imwrite("corrected-" + fn, final)
+    return final
 
 if __name__ == '__main__':
     #print(__doc__)
@@ -125,6 +137,7 @@ if __name__ == '__main__':
     #img2 = remove_bg(fn2)
     src = cv2.imread(fn1)
     dst = cv2.imread(fn2)
+
     detector, matcher = init_feature(feature_name)
     
     if src is None:
@@ -138,7 +151,10 @@ if __name__ == '__main__':
     if detector is None:
         print('unknown feature:', feature_name)
         sys.exit(1)
-   
+
+#    src = illumination_correction(src, fn1)        
+#    dst = illumination_correction(dst, fn2)
+    
     srcImg, srcLoc = seg_img(src, fn1)
     dstImg, dstLoc = seg_img(dst, fn2)
     print("total sub images:" + str(len(srcLoc)) + " " + str(len(dstLoc)))
