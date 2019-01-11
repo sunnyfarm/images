@@ -90,6 +90,18 @@ def seg_img(img, fn):
             groupRec.append(groupLocs[i])
 
     return clone, groupRec
+def detect_rec(img, fn):
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h,s,v = cv2.split(hsv)
+
+    _, threshed = cv2.threshold(s, 50, 255, cv2.THRESH_BINARY_INV)
+
+    cnts = cv2.findContours(threshed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    canvas  = img.copy()
+    cnts = sorted(cnts, key = cv2.contourArea)
+    cnt = cnts[-1]
+    x, y, w, h = cv2.boundingRect(cnt)
+    return x, y, w, h
 
 def test_it():
     parser = argparse.ArgumentParser(description='color segmentation')
@@ -106,11 +118,13 @@ def test_it():
     for i in locs:
         im = image[i[1]:i[1] + i[3], i[0]:i[0] + i[2]]   
         cv2.normalize(im, im, 0, 255, cv2.NORM_MINMAX)
-        cv2.imwrite("seg-" +str(c) + "-" + fn, im)
+        #cv2.imwrite("seg-" +str(c) + "-" + fn, im)
         cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (0,0,0), 10)
         c = c + 1
     print(locs)
+    x, y, w, h = detect_rec(img, fn)
+    cv2.rectangle(srcClone, (x, y), (x + w, y + h), (255, 255, 255), 10)
     cv2.imwrite("seg-all-" + fn, srcClone)
-
+    
 if __name__ == '__main__':
     test_it()

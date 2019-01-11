@@ -4,7 +4,7 @@
 # Python 2/3 compatibility
 from __future__ import print_function
 from pprint import pprint
-from skimage.measure import compare_ssim
+#from skimage.measure import compare_ssim
 import numpy as np
 import cv2
 from removebg import remove_bg
@@ -94,9 +94,9 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
                 #(score, diff) = compare_ssim(imgWarp, img2_clone, full=True)
                 #diff = (diff * 255).astype("uint8")
                 #cv2.imwrite("diffed-" + str(int(matched)) + "-" + str(int(_r * 100)) + ".jpg", diff)
-                
                 img2_bw = cv2.threshold(img2_clone, 127, 255, cv2.THRESH_BINARY)[1]
                 imgWarp_bw = cv2.threshold(imgWarp, 127, 255, cv2.THRESH_BINARY)[1]
+
                 mask_inv = cv2.bitwise_not(img2_bw)
                 xor = cv2.bitwise_and(imgWarp_bw, mask_inv)
                 img3 = cv2.hconcat([imgWarp, img2_clone, mask_inv, xor])
@@ -273,7 +273,7 @@ if __name__ == '__main__':
                 draws.append((best_pt1, best_pt2, good_color))
         else:
             #if best_matched > 10 and best_min_matched_ratio > 0.01:
-            if best_residual < 0.25:
+            if best_residual < 0.5:
                 print('%d%% matched, good matches %s matched_ratio %s residual %s' % (best_matched, best_matches, best_min_matched_ratio, best_residual))
                 draw_color = bad_color
                 prefix = "failed-"
@@ -290,12 +290,12 @@ if __name__ == '__main__':
                     #cv2.imwrite("matched-warp-" + str(int(matched))+ "-" +  str(si) + "-" + str(di) + ".jpg", img4)
                     #dstClone = dst.copy()          
                     #cv2.rectangle(dstClone, (j[0], j[1]), (j[0] + j[2], j[1] + j[3]), draw_color, 10)
-                    cv2.imwrite(prefix + str(int(best_matched))+ "-" +  str(int(best_min_matched_ratio*100)) + "-" + str(si) + "-" + str(best_index) + ".jpg", srcClone)
+                    cv2.imwrite(prefix + str(int(best_matched))+ "-" +  str(int(best_min_matched_ratio*100)) + "-" + str(int(best_residual*100)) + "-" + str(si) + "-" + str(best_index) + ".jpg", srcClone)
                 else:                  
                     srcClone = src.copy()          
                     cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), draw_color, 10)
                     cv2.rectangle(srcClone, (j[0], j[1]), (j[0] + j[2], j[1] + j[3]), draw_color, 10)
-                    cv2.imwrite(prefix + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", srcClone)
+                    cv2.imwrite(prefix + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(int(best_residual*100)) + "-" + str(si) + "-" + str(di) + ".jpg", srcClone)
 
         si = si + 1
     srcClone = src.copy() 
