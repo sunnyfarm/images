@@ -273,7 +273,7 @@ if __name__ == '__main__':
                 draws.append((best_pt1, best_pt2, good_color))
         else:
             #if best_matched > 10 and best_min_matched_ratio > 0.01:
-            if best_residual < 0.5:
+            if best_residual < 0.25:
                 print('%d%% matched, good matches %s matched_ratio %s residual %s' % (best_matched, best_matches, best_min_matched_ratio, best_residual))
                 draw_color = bad_color
                 prefix = "failed-"

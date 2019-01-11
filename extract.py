@@ -23,12 +23,13 @@ def seg_img(img, fn):
     output_img[np.where(mask==0)] = 0
     cv2.imwrite("images-out-"+fn, output_img)
 
-    output_hsv = img_hsv.copy()
-    output_hsv[np.where(mask==0)] = 0
+    #output_hsv = img_hsv.copy()
+    #output_hsv[np.where(mask==0)] = 0
     #cv2.imwrite("images-hsv-"+fn, output_hsv)
     
     #gray = cv2.cvtColor(output_hsv, cv2.COLOR_BGR2GRAY)
     gray = cv2.cvtColor(output_img, cv2.COLOR_BGR2GRAY)
+    _, clone = cv2.threshold(gray,127,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
     blur = cv2.bilateralFilter(gray, 9, 75, 75)
     # find contours in the thresholded image, then initialize the
     # list of group locations
@@ -40,7 +41,7 @@ def seg_img(img, fn):
     groupCnts = groupCnts[0] if imutils.is_cv2() else groupCnts[1]
     groupLocs = []
 
-    clone = np.dstack([gray.copy()] * 3)
+    #clone = np.dstack([gray.copy()] * 3)
     def union(a,b):
         x = min(a[0], b[0])
         y = min(a[1], b[1])
@@ -120,11 +121,13 @@ def test_it():
         cv2.normalize(im, im, 0, 255, cv2.NORM_MINMAX)
         #cv2.imwrite("seg-" +str(c) + "-" + fn, im)
         cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (0,0,0), 10)
+        cv2.rectangle(image, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), (0,0,0), 10)
         c = c + 1
     print(locs)
     x, y, w, h = detect_rec(img, fn)
     cv2.rectangle(srcClone, (x, y), (x + w, y + h), (255, 255, 255), 10)
     cv2.imwrite("seg-all-" + fn, srcClone)
-    
+    cv2.imwrite("seg-img-" + fn, image)
+
 if __name__ == '__main__':
     test_it()
