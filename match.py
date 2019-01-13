@@ -17,6 +17,7 @@ min_kp2_size = 10
 kp_divisor = 200*200
 good_color = (0,255,0)
 bad_color = (0,0,0)
+ratio = 0.7
 
 def init_feature(name):
     chunks = name.split('-')
@@ -51,7 +52,7 @@ def init_feature(name):
     return detector, matcher
 
 
-def filter_matches(kp1, kp2, matches, ratio = 0.75):
+def filter_matches(kp1, min_kp1_size, kp2, min_kp2_size, matches, ratio = 0.75):
     mkp1, mkp2 = [], []
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
@@ -65,11 +66,10 @@ def filter_matches(kp1, kp2, matches, ratio = 0.75):
     
     return p1, p2
 
-def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
+def match_and_draw(matcher, kp1, desc1, min_kp1_size, kp2, desc2, min_kp2_size, img1, img2, si, di):
     raw_matches = matcher.knnMatch(
         desc1, trainDescriptors=desc2, k=2)  # 2
-    ratio = 0.7
-    p1, p2 = filter_matches(kp1, kp2, raw_matches, ratio)
+    p1, p2 = filter_matches(kp1, min_kp1_size, kp2, min_kp2_size, raw_matches, ratio)
     good = []
     for m, n in raw_matches:
         if m.distance < ratio*n.distance:
@@ -112,7 +112,6 @@ def match_and_draw(kp1, desc1, kp2, desc2, img1, img2, si, di):
         return matched, matches, inliner, _r
     else:
         return 0, 0, good, img1, 1.0
-        #print('%d matches found, not enough for homography estimation' % len(p1))
 
 def illumination_correction(img, fn):
     lab= cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -124,17 +123,7 @@ def illumination_correction(img, fn):
     cv2.imwrite("corrected-" + fn, final)
     return final
 
-if __name__ == '__main__':
-    #print(__doc__)
-
-    import sys, getopt
-    opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
-    opts = dict(opts)
-    feature_name = opts.get('--feature', 'akaze')
-    # fn1 is the check target, fn2 is known real one
-    fn1, fn2 = args
-    #img1 = remove_bg(fn1)
-    #img2 = remove_bg(fn2)
+def compare_two(feature_name, fn1, fn2):
     src = cv2.imread(fn1)
     dst = cv2.imread(fn2)
 
@@ -216,7 +205,7 @@ if __name__ == '__main__':
                 print("no good kp")
                 continue
             try:
-                matched, matches, good, residual = match_and_draw(kp1, desc1, kp2, desc2, img1, img2_resize, si, di)
+                matched, matches, good, residual = match_and_draw(matcher, kp1, desc1, min_kp1_size, kp2, desc2, min_kp2_size, img1, img2_resize, si, di)
             except:
                 matched = 0
                 matches = 0
@@ -277,7 +266,7 @@ if __name__ == '__main__':
                 print('%d%% matched, good matches %s matched_ratio %s residual %s' % (best_matched, best_matches, best_min_matched_ratio, best_residual))
                 draw_color = bad_color
                 prefix = "failed-"
-                if (best_matched > 80 and best_min_matched_ratio > 0.1) or (best_matched > 95 and best_matches > 10) or (best_matched > 75 and best_min_matched_ratio > 0.075 and best_matches > 20):
+                if (best_matched > 80 and best_min_matched_ratio > 0.1) or (best_matched > 90 and best_matches >= 10) or (best_matched > 75 and best_min_matched_ratio > 0.075 and best_matches > 20):
                     draw_color = good_color
                     prefix = "matched-"
                 draws.append((best_pt1, best_pt2, draw_color))
@@ -298,7 +287,19 @@ if __name__ == '__main__':
                     cv2.imwrite(prefix + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(int(best_residual*100)) + "-" + str(si) + "-" + str(di) + ".jpg", srcClone)
 
         si = si + 1
-    srcClone = src.copy() 
+    return draws
+
+if __name__ == '__main__':
+    #print(__doc__)
+
+    import sys, getopt
+    opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
+    opts = dict(opts)
+    feature_name = opts.get('--feature', 'akaze')
+    # fn1 is the check target, fn2 is known real one
+    fn1, fn2 = args
+    draws = compare_two(feature_name, fn1, fn2)
+    srcClone = cv2.imread(fn1)
     for i in draws:
         pt1, pt2, color = i[0],i[1],i[2]
         cv2.rectangle(srcClone, pt1, pt2, color, 10)
