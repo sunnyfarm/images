@@ -251,7 +251,7 @@ def compare_two(feature_name, fn1, fn2):
                 #img3 = cv2.hconcat([imgWarp, img2])
                 # Show the image
                 srcClone = src.copy()      
-                draws.append((best_pt1, best_pt2, good_color))
+                draws.append((best_pt1, best_pt2, best_matched / 100, 1 - best_residual))
                 cv2.rectangle(srcClone, best_pt1, best_pt2, good_color, 10)
                 cv2.imwrite("good-" + str(int(best_matched)) + "-" + str(si) + "-" + str(best_index) + ".jpg", srcClone)
             else:
@@ -259,7 +259,7 @@ def compare_two(feature_name, fn1, fn2):
                 cv2.rectangle(srcClone, (i[0], i[1]), (i[0] + i[2], i[1] + i[3]), good_color, 10)
                 cv2.rectangle(srcClone, best_pt1, best_pt2, good_color, 10)
                 cv2.imwrite("good-" + str(int(best_matched))+ "-" + str(si) + "-" + str(best_index) + ".jpg", srcClone)
-                draws.append((best_pt1, best_pt2, good_color))
+                draws.append((best_pt1, best_pt2, best_matched / 100, 1 - best_residual))
         else:
             #if best_matched > 10 and best_min_matched_ratio > 0.01:
             if best_residual < 0.25:
@@ -269,7 +269,7 @@ def compare_two(feature_name, fn1, fn2):
                 if (best_matched > 80 and best_min_matched_ratio > 0.1) or (best_matched > 90 and best_matches >= 10) or (best_matched > 75 and best_min_matched_ratio > 0.075 and best_matches > 20):
                     draw_color = good_color
                     prefix = "matched-"
-                draws.append((best_pt1, best_pt2, draw_color))
+                draws.append((best_pt1, best_pt2, best_matched / 100, 1 - best_residual))
                 if fn1 != fn2 :
                     #img3 = cv2.drawMatchesKnn(img1, kp1, img2, kp2, good, None, flags=2)
                     #cv2.imwrite("matched-" + str(int(matched))+ "-" +  str(int(min_matched_ratio*100)) + "-" + str(si) + "-" + str(di) + ".jpg", img3)
@@ -290,8 +290,6 @@ def compare_two(feature_name, fn1, fn2):
     return draws
 
 if __name__ == '__main__':
-    #print(__doc__)
-
     import sys, getopt
     opts, args = getopt.getopt(sys.argv[1:], '', ['feature='])
     opts = dict(opts)
@@ -301,6 +299,9 @@ if __name__ == '__main__':
     draws = compare_two(feature_name, fn1, fn2)
     srcClone = cv2.imread(fn1)
     for i in draws:
-        pt1, pt2, color = i[0],i[1],i[2]
+        pt1, pt2, matched, similarity = i[0],i[1],i[2],i[3]
+        color = bad_color
+        if matched > 0.7 and similarity > 0.8:
+            color = good_color
         cv2.rectangle(srcClone, pt1, pt2, color, 10)
     cv2.imwrite("result-" + fn1, srcClone)
