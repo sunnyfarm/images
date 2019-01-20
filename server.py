@@ -9,6 +9,8 @@ import numpy as np
 import jsonpickle
 import base64
 from werkzeug import secure_filename
+import tempfile
+import match
 
 context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
 context.load_cert_chain('server.crt', 'server.key')
@@ -38,26 +40,47 @@ def require_appkey(view_function):
         abort(401)
     return decorated_function
 
-@app.route('/api/v1/query', methods=['POST'])
+def name_to_file(name):
+    try:
+        json_data = json.loads(open('images.json').read())
+        return json_data[name]
+    except:
+        return None
+
+@app.route('/api/v1/compare', methods=['POST'])
 @require_appkey
-def query():
+def compare():
     json_str = request.json
     json_out = json.loads(json_str)
-    if json_out['image'] is not None:
-        image = json_out['image']
-        data = base64.b64decode(image)
-        try:
-            f = open('out.jpg', 'wb') 
-            f.write(data)
-        finally:
-            f.close()
-    #print(request.json, request.data, request.files)
     
-    #image = f['files']
-    #json = f['json']
+    if json_out['image'] is None or json_out['name'] is None:
+        response = {'message': 'missing image or name'}
+        response_pickled = jsonpickle.encode(response)
+        return Response(response=response_pickled, status=200, mimetype="application/json")
     
-    # decode image
-    response = {'message': 'image received'}
+    image = json_out['image']
+    ground_truth = name_to_file(json_out['name'])
+    if ground_truth is None:
+        response = {'message': 'invalid name'}
+        response_pickled = jsonpickle.encode(response)
+        return Response(response=response_pickled, status=200, mimetype="application/json")
+
+    data = base64.b64decode(image)
+    image_file = ""
+    try:
+        image_file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False).name
+        print("tmp file:" + image_file)
+        f = open(image_file, 'wb') 
+        f.write(data)
+        f.close()
+    except:
+        response = {'message': 'invalid image'}
+        response_pickled = jsonpickle.encode(response)
+        return Response(response=response_pickled, status=200, mimetype="application/json")
+    print("compare {} and {}".format(image_file, ground_truth))
+    draws = match.compare_two('akaze', image_file, ground_truth)
+    response = json.dumps(draws)
+    print(response)
     # encode response using jsonpickle
     response_pickled = jsonpickle.encode(response)
 
@@ -65,6 +88,6 @@ def query():
 
 @app.route('/')
 def index_page():
-    return 'Test'
+    return 'Welcome'
 
 app.run(host='0.0.0.0',port='443', debug = False/True, ssl_context=context)
