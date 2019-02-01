@@ -75,7 +75,7 @@ def match_and_draw(matcher, kp1, desc1, min_kp1_size, kp2, desc2, min_kp2_size, 
         if m.distance < ratio*n.distance:
             good.append([m])
     
-    if len(p1) >= 2:
+    if len(p1) >= 5:
         h, status = cv2.findHomography(p1, p2, cv2.RANSAC, 10.0)
         #h, status = cv2.findHomography(p1, p2, cv2.LMEDS)
         inliner = []
@@ -84,34 +84,44 @@ def match_and_draw(matcher, kp1, desc1, min_kp1_size, kp2, desc2, min_kp2_size, 
                 inliner.append(good[i])
         
         matched = np.sum(status) / len(status) * 100
-        matches = np.sum(status)
+        matches = np.sum(status)           
         _r = 1.0
+        non_linear = False        
         try:
             imgWarp = cv2.warpPerspective(img1, h, (img2.shape[1],img2.shape[0]))
-            if imgWarp is not None and len(imgWarp) > 0:                
-                imgWarp = cv2.pyrDown(imgWarp)
-                img2_clone = cv2.pyrDown(img2)
-                #(score, diff) = compare_ssim(imgWarp, img2_clone, full=True)
-                #diff = (diff * 255).astype("uint8")
-                #cv2.imwrite("diffed-" + str(int(matched)) + "-" + str(int(_r * 100)) + ".jpg", diff)
-                img2_bw = cv2.threshold(img2_clone, 127, 255, cv2.THRESH_BINARY)[1]
-                imgWarp_bw = cv2.threshold(imgWarp, 127, 255, cv2.THRESH_BINARY)[1]
+            if imgWarp is not None and len(imgWarp) > 0:
+                img2_clone = img2
+                last_r = 100
+                for i in range(6):
+                    imgWarp = cv2.pyrDown(imgWarp)
+                    img2_clone = cv2.pyrDown(img2_clone)
+                    if min(imgWarp.shape[:2]) < 20:
+                        break;
+                    #(score, diff) = compare_ssim(imgWarp, img2_clone, full=True)
+                    #diff = (diff * 255).astype("uint8")
+                    #cv2.imwrite("diffed-" + str(int(matched)) + "-" + str(int(_r * 100)) + ".jpg", diff)
+                    img2_bw = cv2.threshold(img2_clone, 127, 255, cv2.THRESH_BINARY)[1]
+                    imgWarp_bw = cv2.threshold(imgWarp, 127, 255, cv2.THRESH_BINARY)[1]
 
-                mask_inv = cv2.bitwise_not(img2_bw)
-                xor = cv2.bitwise_and(imgWarp_bw, mask_inv)
-                img3 = cv2.hconcat([imgWarp, img2_clone, mask_inv, xor])
-                _rows, _cols = xor.shape[:2]
-                _size = _rows * _cols
-                _diff = np.count_nonzero(xor)
-                _orig_size = np.count_nonzero(img2_clone)
-                _r = float( _diff / _orig_size) # _diff / _size
-                cv2.imwrite("warped-" + str(int(matched)) + "-" + str(int(_r * 100)) + ".jpg", img3)
+                    mask_inv = cv2.bitwise_not(img2_bw)
+                    xor = cv2.bitwise_and(imgWarp_bw, mask_inv)
+                    img3 = cv2.hconcat([imgWarp, img2_clone, mask_inv, xor])
+                    _rows, _cols = xor.shape[:2]
+                    _size = _rows * _cols
+                    _diff = np.count_nonzero(xor)
+                    _orig_size = np.count_nonzero(img2_clone)
+                    _r = float( _diff / _orig_size) # _diff / _size
+                    if _r > last_r:
+                        print("non linearity detected: " + str(last_r) + " vs " + str(r))
+                        non_linear = True
+                    last_r = _r
+                    cv2.imwrite("warped-" + str(int(matched)) + "-" + str(int(_r * 100)) + "-scale-" + str(i) + ".jpg", img3)
                 
         except:
             imgWarp = None
-        return matched, matches, inliner, _r
+        return matched, matches, inliner, _r, non_linear
     else:
-        return 0, 0, good, img1, 1.0
+        return 0, 0, good, img1, 1.0, non_linear
 
 def illumination_correction(img, fn):
     lab= cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
@@ -205,14 +215,15 @@ def compare_two(feature_name, fn1, fn2):
                 print("no good kp")
                 continue
             try:
-                matched, matches, good, residual = match_and_draw(matcher, kp1, desc1, min_kp1_size, kp2, desc2, min_kp2_size, img1, img2_resize, si, di)
+                matched, matches, good, residual, non_linear = match_and_draw(matcher, kp1, desc1, min_kp1_size, kp2, desc2, min_kp2_size, img1, img2_resize, si, di)
             except:
                 matched = 0
                 matches = 0
                 good = []
                 raw = []
                 residual = 1.0
-            print("src %d big kp %d features %d, dst %d big kp %d features %d" % (si, goodKp1, len(desc1), di, goodKp2, len(desc2)))
+                non_linear = True
+            print("src %d big kp %d features %d, dst %d big kp %d features %d non_linear %s" % (si, goodKp1, len(desc1), di, goodKp2, len(desc2), non_linear))
             min_features = goodKp2 #len(desc1) #(len(desc1) + len(desc2))/2
             max_features = len(desc2)
             min_matched_ratio = matches / min_features
